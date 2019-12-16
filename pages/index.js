@@ -1,15 +1,44 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Head from 'next/head'
 import fetch from 'isomorphic-unfetch'
 
+const ICONMAP = {
+  '01d': 'sunny'
+}
+
+
 const Home = () => {
+  const [loading, setLoading] = useState(false)
+  const [zipCode, setZipCode] = useState(null)
+  const [currentWeather, setCurrentWeather] = useState(null)
+
+  const getWeatherFromURL = async (url) => {
+    setLoading(true)
+    const res = await fetch(`http://api.openweathermap.org/data/2.5/${url}&APPID=${process.env.OPENWEATHER_API}&units=imperial`)
+    const json = await res.json()
+    const weatherContext = {
+      condition: json.weather[0].main,
+      conditionDescription: json.weather[0].description,
+      temperatures: json.main,
+      wind: json.wind,
+      location: json.name,
+      icon: ICONMAP[json.weather[0].icon]
+    }
+    setCurrentWeather(weatherContext)
+    setLoading(false)
+  }
 
   const getWeatherForCoords = async ({latitude, longitude}) => {
     console.log(`Finding weather for location at coordinates: lat: ${latitude} lng: ${longitude}`)
-    const res = await fetch(`http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&APPID=${process.env.OPENWEATHER_API}`)
-    const json = await res.json()
-    console.log(json)
-    return json
+    await getWeatherFromURL(`weather?lat=${latitude}&lon=${longitude}`)
+  }
+
+  const getWeatherForZipCode = async () => {
+    if (zipCode.length !== 5) {
+      console.log('Error invalid zip')
+      return
+    }
+    await getWeatherFromURL(`weather?zip=${zipCode},us`)
   }
 
   const locateMe = () => {
@@ -29,6 +58,17 @@ const Home = () => {
     )
   }
 
+  let weatherDisplay = null
+  if (currentWeather) {
+    weatherDisplay = (
+      <p>
+        Conditions are {currentWeather.condition} in {currentWeather.location}.
+        The temperature is {currentWeather.temperatures.temp}&deg; and feels like {currentWeather.temperatures.feels_like}&deg;.
+        <img src={`/static/icons/${currentWeather.icon}.svg`} />
+      </p>
+    )
+  }
+
   return (
     <div>
       <Head>
@@ -40,51 +80,15 @@ const Home = () => {
         Find my location
       </button>
 
+      <input type="text" onChange={(e)=> setZipCode(e.target.value)} />
+      <button onClick={getWeatherForZipCode}>Lookup</button>
+
+      {(loading) ? 'Loading...' : ''}
+
+      {weatherDisplay}
+
       <style jsx>{`
-        .hero {
-          width: 100%;
-          color: #333;
-        }
-        .title {
-          margin: 0;
-          width: 100%;
-          padding-top: 80px;
-          line-height: 1.15;
-          font-size: 48px;
-        }
-        .title,
-        .description {
-          text-align: center;
-        }
-        .row {
-          max-width: 880px;
-          margin: 80px auto 40px;
-          display: flex;
-          flex-direction: row;
-          justify-content: space-around;
-        }
-        .card {
-          padding: 18px 18px 24px;
-          width: 220px;
-          text-align: left;
-          text-decoration: none;
-          color: #434343;
-          border: 1px solid #9b9b9b;
-        }
-        .card:hover {
-          border-color: #067df7;
-        }
-        .card h3 {
-          margin: 0;
-          color: #067df7;
-          font-size: 18px;
-        }
-        .card p {
-          margin: 0;
-          padding: 12px 0 0;
-          font-size: 13px;
-          color: #333;
-        }
+
       `}</style>
     </div>
   )
