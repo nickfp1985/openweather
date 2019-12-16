@@ -1,6 +1,7 @@
 import React from 'react'
 import Head from 'next/head'
 import Nav from '../components/nav'
+import fetch from 'isomorphic-unfetch'
 
 const Home = () => (
   <div>
@@ -84,5 +85,13 @@ const Home = () => (
     `}</style>
   </div>
 )
+
+Home.getInitialProps = async ({ req }) => {
+  const res = await fetch(`http://api.openweathermap.org/data/2.5/weather?q=London&APPID=${process.env.OPENWEATHER_API}`)
+  const resJson = await res.json()
+  console.log(resJson)
+  return {}
+}
+
 
 export default Home
